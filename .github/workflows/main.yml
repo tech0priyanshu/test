@@ -1,0 +1,25 @@
+name: taking input 
+
+on:
+  pull_request:
+    types: [opened, synchronize, edited]
+
+jobs:
+  package-optimization:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
+      # Step 2: Parse package metadata from pull request
+      - name: Parse package metadata from pull request
+        id: parse-description
+        run: |
+          DESCRIPTION='${{ github.event.pull_request.body }}'
+          PACKAGE=$(echo "$DESCRIPTION" | jq -r '.package')
+          VERSION=$(echo "$DESCRIPTION" | jq -r '.version')
+          echo "PACKAGE=$PACKAGE" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    
