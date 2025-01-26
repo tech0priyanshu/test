@@ -17,7 +17,7 @@ jobs:
 
       - name: Check if artifact exists
         run: |
-          VERSION="data.table_1.16.4"
+          VERSION="data.table_1.16.4.tar"
           if gh release list --repo "${{ github.repository }}" | grep -q "${VERSION}"; then
             echo "Artifact found!"
           else
