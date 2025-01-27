@@ -19,7 +19,11 @@ jobs:
           DESCRIPTION='${{ github.event.pull_request.body }}'
           PACKAGE=$(echo "$DESCRIPTION" | jq -r '.package')
           VERSION=$(echo "$DESCRIPTION" | jq -r '.version')
-          echo "PACKAGE=$PACKAGE" >> $GITHUB_ENV
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          steps:
+           - uses: actions/first-interaction@v1
+          with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-message: "$PACKAGE $VERSION"
+          pr-message: "$PACKAGE $VERSION"
 
     
