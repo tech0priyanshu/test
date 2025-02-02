@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Set up R
-        uses: r-lib/actions/setup-r@v3
+        uses: r-lib/actions/setup-r@v4
 
       - name: Define variables
         run: |
@@ -49,7 +49,7 @@ jobs:
           
       - name: Upload artifact for future use
         if: env.artifact_exists == 'false'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${ARTIFACT_PATH}
