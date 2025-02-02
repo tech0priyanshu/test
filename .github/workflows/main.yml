@@ -36,8 +36,8 @@ jobs:
       - name: Build data.table from source (if artifact not found)
         if: env.artifact_exists == 'false'
         run: |
-          Rscript -e "install.packages('devtools')"
-          Rscript -e "devtools::install_version('data.table', version = '${{ env.VERSION }}', repos = 'http://cran.rstudio.com')"
+          Rscript -e "install.packages('data.table', version = '${{ env.VERSION }}', repos = 'http://cran.rstudio.com')"
+        
 
           # Package built version
           mkdir -p artifacts
