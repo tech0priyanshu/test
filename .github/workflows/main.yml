@@ -1,0 +1,61 @@
+name: Check or Build data.table Artifact
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  check_or_build_data_table:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+
+      - name: Define variables
+        run: |
+          VERSION="1.14.0"  # Example version, change as needed
+          ARTIFACT_NAME="data_table_${VERSION}.tar.gz"
+          ARTIFACT_PATH="artifacts/${ARTIFACT_NAME}"
+
+      - name: Check if precompiled artifact exists
+        id: check_artifact
+        run: |
+          if curl --head --fail https://example.com/artifacts/${ARTIFACT_NAME}; then
+            echo "Artifact found"
+            echo "artifact_exists=true" >> $GITHUB_ENV
+          else
+            echo "Artifact not found"
+            echo "artifact_exists=false" >> $GITHUB_ENV
+
+      - name: Download precompiled artifact (if exists)
+        if: env.artifact_exists == 'true'
+        run: |
+          curl -L -o ${ARTIFACT_NAME} https://example.com/artifacts/${ARTIFACT_NAME}
+          Rscript -e "install.packages('${ARTIFACT_NAME}', repos = NULL, type = 'source')"
+
+      - name: Build data.table from source (if artifact not found)
+        if: env.artifact_exists == 'false'
+        run: |
+          # Install dependencies
+          Rscript -e "install.packages('data.table', version = '${VERSION}')"
+          Rscript -e "install.packages('devtools')"
+          # Build data.table from source
+          Rscript -e "devtools::install_version('data.table', version = '${VERSION}')"
+
+          # Minify and package the built version
+          tar -czf ${ARTIFACT_PATH} data.table_${VERSION}/
+          
+      - name: Upload artifact for future use
+        if: env.artifact_exists == 'false'
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${ARTIFACT_PATH}
+
+      - name: Fallback mechanism (optional)
+        if: failure()
+        run: |
+          echo "Building from source due to failure in artifact retrieval."
+          # Add any additional fallback logic if necessary
