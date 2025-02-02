@@ -1,0 +1,17 @@
+name: Check or 
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install data.table
+      run: |
+        Rscript -e "install.packages('data.table', repos = 'http://cran.rstudio.com')"
+    - name: Create tarball
+      run: |
+        mkdir -p data.table
+        cp -r /tmp/RtmpDkq1T4/downloaded_packages/data.table data.table/
+        tar -czvf data.table.tar.gz data.table/
