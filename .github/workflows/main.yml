@@ -35,6 +35,7 @@ jobs:
 
       - name: Build data.table from source (if artifact not found)
         if: env.artifact_exists == 'false'
+        uses: actions/download-artifact@v4
         run: |
          echo "Checking artifact existence: ${{ env.artifact_exists }}"
          Rscript -e "install.packages('data.table', version = '${{ env.VERSION }}', repos = 'http://cran.rstudio.com')"
