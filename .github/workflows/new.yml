@@ -27,7 +27,6 @@ jobs:
             echo "artifact_exists=true" >> $GITHUB_ENV
           else
             echo "artifact_exists=false" >> $GITHUB_ENV
-          fi
 
       - name: Download precompiled artifact (if exists)
         if: env.artifact_exists == 'true'
@@ -45,13 +44,22 @@ jobs:
       - name: Create tarball (minify and package)
         if: env.artifact_exists == 'false'
         run: |
+          # Get the package path of data.table
           PKG_PATH=$(Rscript -e "cat(system.file(package='data.table'))")
           if [ -z "$PKG_PATH" ]; then
             echo "Error: data.table not found after installation!"
             exit 1
           fi
+
+          # Ensure the artifacts directory exists
+          mkdir -p artifacts
+
+          # Create the tarball from the data.table package directory
           mkdir -p data.table && cp -r "$PKG_PATH" data.table/
-          tar -czvf ${{ env.ARTIFACT_PATH }} data.table/
+
+          # Create the tarball and store it in the artifacts directory
+          tar -czvf ${{ env.ARTIFACT_PATH }} -C data.table .
+          
         shell: bash
 
       - name: Upload artifact for future use
