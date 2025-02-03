@@ -58,6 +58,4 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.ARTIFACT_PATH }}
 
-      - name: Fallback mechanism (optional)
-        if: failure()
-        run: echo "Building from source due to failure in artifact retrieval."
+
