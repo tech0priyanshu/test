@@ -35,16 +35,22 @@ jobs:
 
       - name: Build data.table from source (if artifact not found)
         if: env.artifact_exists == 'false'
-        uses: actions/download-artifact@v4
         run: |
-         echo "Checking artifact existence: ${{ env.artifact_exists }}"
-         Rscript -e "install.packages('data.table', version = '${{ env.VERSION }}', repos = 'http://cran.rstudio.com')"
-         - name: Create tarball
-          run: |
-          PKG_PATH=$(Rscript -e "cat(system.file(package='data.table'))")[ -z "$PKG_PATH" ] && { echo "Error: data.table not found!"; exit 1; }
+          echo "Checking artifact existence: ${{ env.artifact_exists }}"
+          Rscript -e "install.packages('data.table', version = '${{ env.VERSION }}', repos = 'http://cran.rstudio.com')"
+
+      - name: Create tarball
+        if: env.artifact_exists == 'false'
+        run: |
+          PKG_PATH=$(Rscript -e "cat(system.file(package='data.table'))")
+          if [ -z "$PKG_PATH" ]; then
+            echo "Error: data.table not found!"
+            exit 1
+          fi
           mkdir -p data.table && cp -r "$PKG_PATH" data.table/
           tar -czvf data.table.tar.gz data.table/
-         shell: bash
+        shell: bash
+
       - name: Upload artifact for future use
         if: env.artifact_exists == 'false'
         uses: actions/upload-artifact@v4
@@ -55,4 +61,3 @@ jobs:
       - name: Fallback mechanism (optional)
         if: failure()
         run: echo "Building from source due to failure in artifact retrieval."
-
