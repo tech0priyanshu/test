@@ -49,8 +49,7 @@ jobs:
           fi
           mkdir -p data.table && cp -r "$PKG_PATH" data.table/
           tar -czvf data.table.tar.gz data.table/
-          .github/scripts/minify.sh
-           bash minimize_and_install.sh
+          bash .github/minimize_and_install.sh
         shell: bash
 
       - name: Upload artifact for future use
