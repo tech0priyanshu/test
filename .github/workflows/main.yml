@@ -7,8 +7,16 @@ on:
 jobs:
   check_or_build_data_table:
     runs-on: ubuntu-latest
+    
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: List Files for Debugging
+        run: |
+          ls -l test/
+          ls -l .github/workflows/
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
 
