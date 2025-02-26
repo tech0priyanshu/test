@@ -17,6 +17,7 @@ jobs:
           echo "VERSION=1.14.0" >> $GITHUB_ENV  # Change version as needed
           echo "ARTIFACT_NAME=data_table_${{ env.VERSION }}.tar.gz" >> $GITHUB_ENV
           echo "ARTIFACT_PATH=artifacts/data_table_${{ env.VERSION }}.tar.gz" >> $GITHUB_ENV
+          echo "$GITHUB_ENV"
 
       - name: Check if precompiled artifact exists
         id: check_artifact
