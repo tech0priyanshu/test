@@ -48,7 +48,7 @@ jobs:
             echo "Error: data.table not found!"
             exit 1
           fi
-          chmod +x test/minimize_and_install.sh
+          chmod +x /test/minimize_and_install.sh
           mkdir -p data.table && cp -r "$PKG_PATH" data.table/
           tar -czvf data.table.tar.gz data.table/
           
