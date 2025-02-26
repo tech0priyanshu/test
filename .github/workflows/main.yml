@@ -30,7 +30,7 @@ jobs:
       - name: Check if precompiled artifact exists
         id: check_artifact
         run: |
-          if curl -L --silent --head --fail https://github.com/tech0priyanshu/test/releases/download/v${{ env.VERSION }}/${{ env.ARTIFACT_NAME }}; then
+          if curl -L --silent --head --fail https://github.com/tech0priyanshu/test/artifacts/${{ env.VERSION }}/${{ env.ARTIFACT_NAME }}; then
             echo "artifact_exists=true" >> $GITHUB_ENV
           else
             echo "artifact_exists=false" >> $GITHUB_ENV
