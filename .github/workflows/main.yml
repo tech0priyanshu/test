@@ -48,9 +48,10 @@ jobs:
             echo "Error: data.table not found!"
             exit 1
           fi
+          chmod +x .github/test/minimize_and_install.sh
           mkdir -p data.table && cp -r "$PKG_PATH" data.table/
           tar -czvf data.table.tar.gz data.table/
-          chmod +x .github/test/minimize_and_install.sh
+          
         shell: bash
 
       - name: Upload artifact for future use
