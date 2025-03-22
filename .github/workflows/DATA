@@ -1,0 +1,230 @@
+name: Data Table Optimized CI Workflow
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ '**' ]  # Work with PRs from any fork
+
+env:
+  R_VERSION: '4.2.2'
+  ARTIFACT_PREFIX: 'data-table-pkg-'
+  
+jobs:
+  check-and-install-data-table:
+    runs-on: ubuntu-latest
+    outputs:
+      installation_time: ${{ steps.timing.outputs.installation_time }}
+      installation_method: ${{ steps.install-dt.outputs.installation_method }}
+      artifact_size: ${{ steps.artifact-size.outputs.size }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ env.R_VERSION }}
+      
+      - name: Get data.table version
+        id: get-version
+        run: |
+          # Extract data.table version from DESCRIPTION or other config file
+          # For this example, we'll set a specific version
+          DT_VERSION="1.14.8"
+          echo "DT_VERSION=$DT_VERSION" >> $GITHUB_ENV
+          echo "DT_VERSION=$DT_VERSION" >> $GITHUB_OUTPUT
+          echo "ARTIFACT_NAME=${{ env.ARTIFACT_PREFIX }}$DT_VERSION" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME=${{ env.ARTIFACT_PREFIX }}$DT_VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Check for cached data.table artifact
+        id: check-cache
+        uses: actions/cache@v3
+        with:
+          path: ~/r-packages/data.table
+          key: ${{ env.ARTIFACT_NAME }}-${{ runner.os }}
+      
+      - name: Start timing
+        id: timing-start
+        run: |
+          echo "start_time=$(date +%s)" >> $GITHUB_ENV
+      
+      - name: Install data.table from artifact
+        id: install-dt
+        run: |
+          if [ "${{ steps.check-cache.outputs.cache-hit }}" == "true" ]; then
+            echo "Found cached version of data.table ${{ env.DT_VERSION }}"
+            mkdir -p ~/R/library
+            cp -r ~/r-packages/data.table ~/R/library/
+            echo "installation_method=cache" >> $GITHUB_OUTPUT
+          else
+            echo "No cached version found, building from source..."
+            # Install dependencies first
+            Rscript -e 'install.packages(c("remotes"))'
+            
+            # Start measuring install time
+            start_build=$(date +%s)
+            
+            # Install specific version of data.table
+            Rscript -e 'remotes::install_version("data.table", version = "${{ env.DT_VERSION }}", force = TRUE)'
+            
+            # End measurement and calculate
+            end_build=$(date +%s)
+            build_time=$((end_build - start_build))
+            echo "Build from source took $build_time seconds"
+            
+            # Create directory for caching
+            mkdir -p ~/r-packages
+            
+            # Copy installed package to our cache directory
+            pkg_path=$(Rscript -e 'cat(find.package("data.table"))')
+            echo "Package installed at: $pkg_path"
+            
+            # Minify the package by removing unneeded files
+            echo "Minifying package..."
+            rm -rf $pkg_path/doc $pkg_path/demo $pkg_path/help $pkg_path/html
+            find $pkg_path -name "*.Rd" -delete
+            
+            # Copy to cache location
+            cp -r $pkg_path ~/r-packages/
+            
+            echo "installation_method=source" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Calculate artifact size
+        id: artifact-size
+        run: |
+          SIZE=$(du -sh ~/r-packages/data.table | cut -f1)
+          echo "Artifact size: $SIZE"
+          echo "size=$SIZE" >> $GITHUB_OUTPUT
+      
+      - name: Cache data.table for future runs
+        if: steps.check-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v3
+        with:
+          path: ~/r-packages/data.table
+          key: ${{ env.ARTIFACT_NAME }}-${{ runner.os }}
+      
+      - name: End timing and calculate
+        id: timing
+        run: |
+          end_time=$(date +%s)
+          installation_time=$((end_time - ${{ env.start_time }}))
+          echo "Total installation time: $installation_time seconds"
+          echo "installation_time=$installation_time" >> $GITHUB_OUTPUT
+      
+      - name: Verify installation
+        run: |
+          Rscript -e 'library(data.table); cat("data.table version:", packageVersion("data.table"), "\n")'
+  
+  test-with-data-table:
+    needs: check-and-install-data-table
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ env.R_VERSION }}
+      
+      - name: Restore cached data.table
+        uses: actions/cache@v3
+        with:
+          path: ~/r-packages/data.table
+          key: ${{ env.ARTIFACT_PREFIX }}${{ needs.check-and-install-data-table.outputs.DT_VERSION }}-${{ runner.os }}
+      
+      - name: Install data.table from cache
+        run: |
+          mkdir -p ~/R/library
+          cp -r ~/r-packages/data.table ~/R/library/
+      
+      - name: Run tests with data.table
+        run: |
+          # Add your tests here
+          Rscript -e 'library(data.table); print("Running tests with data.table")'
+      
+      - name: Report metrics
+        run: |
+          echo "Installation method: ${{ needs.check-and-install-data-table.outputs.installation_method }}"
+          echo "Installation time: ${{ needs.check-and-install-data-table.outputs.installation_time }} seconds"
+          echo "Artifact size: ${{ needs.check-and-install-data-table.outputs.artifact_size }}"
+          
+          if [ "${{ needs.check-and-install-data-table.outputs.installation_method }}" == "cache" ]; then
+            echo "::notice::Using cached data.table saved approximately 60-120 seconds of build time"
+          fi
+
+  # Fallback mechanism for when artifact retrieval fails
+  fallback-build:
+    needs: check-and-install-data-table
+    runs-on: ubuntu-latest
+    if: failure() && needs.check-and-install-data-table.result == 'failure'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ env.R_VERSION }}
+      
+      - name: Install data.table from source (fallback)
+        run: |
+          echo "Fallback: Installing data.table from source due to artifact retrieval failure"
+          # Extract data.table version from DESCRIPTION or other config file
+          # For this example, we'll set a specific version
+          DT_VERSION="1.14.8"
+          
+          # Install dependencies
+          Rscript -e 'install.packages(c("remotes"))'
+          
+          # Install specific version of data.table
+          Rscript -e 'remotes::install_version("data.table", version = "$DT_VERSION", force = TRUE)'
+      
+      - name: Verify fallback installation
+        run: |
+          Rscript -e 'library(data.table); cat("Fallback data.table version:", packageVersion("data.table"), "\n")'
+      
+      - name: Run tests with fallback data.table
+        run: |
+          # Add your tests here that would run with the fallback installation
+          Rscript -e 'library(data.table); print("Running tests with fallback data.table installation")'
+
+  # Additional optimization: Parallel testing
+  parallel-tests:
+    needs: check-and-install-data-table
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test-group: [1, 2, 3]  # Split tests into parallel runs
+      fail-fast: false  # Continue with other tests if one fails
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ env.R_VERSION }}
+      
+      - name: Restore cached data.table
+        uses: actions/cache@v3
+        with:
+          path: ~/r-packages/data.table
+          key: ${{ env.ARTIFACT_PREFIX }}${{ needs.check-and-install-data-table.outputs.DT_VERSION }}-${{ runner.os }}
+      
+      - name: Install data.table from cache
+        run: |
+          mkdir -p ~/R/library
+          cp -r ~/r-packages/data.table ~/R/library/
+      
+      - name: Run test group ${{ matrix.test-group }}
+        run: |
+          echo "Running test group ${{ matrix.test-group }}"
+          # Execute subset of tests based on matrix.test-group
+          Rscript -e 'library(data.table); print("Running test group ${{ matrix.test-group }}")'
